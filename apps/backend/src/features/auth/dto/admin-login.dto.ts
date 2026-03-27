@@ -1,0 +1,14 @@
+import type { AdminLoginRequest } from "@bon/contracts";
+import { Transform } from "class-transformer";
+import { IsNotEmpty, IsString } from "class-validator";
+
+export class AdminLoginDto implements AdminLoginRequest {
+  @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  username!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password!: string;
+}
