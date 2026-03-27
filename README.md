@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 본아이에프 운영 매뉴얼 챗봇
 
 npm workspace 기반 모노레포
@@ -13,4 +12,3 @@ npm workspace 기반 모노레포
 - [패키지 문서](./docs/packages/README.md)
 =======
 
->>>>>>> 72d2f1673d4869d19571833c900e0e8e03692268
