@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+.next
+**/.next
+coverage
+**/*.tsbuildinfo
+.DS_Store
+
+.env
+.env.*
+apps/backend/.env
+apps/frontend/.env.local
