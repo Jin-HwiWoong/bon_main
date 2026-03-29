@@ -1,15 +1,18 @@
 "use client"
 
-import { use, useCallback, useEffect, useState } from "react"
+import { use, useCallback, useDeferredValue, useEffect, useState } from "react"
 import type { CreateArticleRequest, UpdateArticleRequest } from "@bon/contracts"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, Trash2 } from "lucide-react"
 
 import { LogoutButton } from "@/components/auth/logout-button"
 import { useRequireAuth } from "@/components/auth/auth-provider"
-import { createArticle, deleteArticle, getArticle, getCategories, updateArticle } from "@/lib/api/admin-client"
+import { createArticle, createArticleImageUploadUrl, deleteArticle, getArticle, getCategories, updateArticle } from "@/lib/api/admin-client"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { MarkdownContent } from "@/components/ui/markdown-content"
+import { MarkdownEditor } from "@/components/ui/markdown-editor"
 import { Category, Article } from "@/types"
 import { useToast } from "@/components/ui/toast"
 
@@ -41,6 +44,8 @@ export default function ArticleEditPage({ params }: { params: Promise<{ id: stri
         requires_sm: false,
         is_published: true
     });
+    const deferredContent = useDeferredValue(formData.content || "");
+    const deferredTitle = useDeferredValue(formData.title || "");
 
     const fetchCategories = useCallback(async () => {
         try {
@@ -106,6 +111,25 @@ export default function ArticleEditPage({ params }: { params: Promise<{ id: stri
         }
     };
 
+    const uploadArticleImage = useCallback(async (file: File) => {
+        const upload = await createArticleImageUploadUrl({
+            file_name: file.name,
+            content_type: file.type
+        });
+
+        const uploadResponse = await fetch(upload.upload_url, {
+            method: upload.method,
+            headers: upload.headers,
+            body: file
+        });
+
+        if (!uploadResponse.ok) {
+            throw new Error("S3 업로드에 실패했습니다.");
+        }
+
+        return upload.public_url;
+    }, []);
+
     if (isLoading || !isAuthorized || loading) return <div className="p-8 text-center">로딩 중...</div>;
 
     return (
@@ -135,82 +159,101 @@ export default function ArticleEditPage({ params }: { params: Promise<{ id: stri
                 </header>
 
                 <main className="flex-1 px-4 py-6 md:px-6 md:py-8">
-                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 md:p-6 space-y-6">
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 md:p-6 space-y-6">
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">카테고리</label>
-                                <select
-                                    className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-bon-green-start outline-none"
-                                    value={String(formData.category_id)}
-                                    onChange={(e) => setFormData({ ...formData, category_id: Number(e.target.value) })}
-                                >
-                                    {categories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">카테고리</label>
+                                    <select
+                                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-bon-green-start outline-none"
+                                        value={String(formData.category_id)}
+                                        onChange={(e) => setFormData({ ...formData, category_id: Number(e.target.value) })}
+                                    >
+                                        {categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">우선순위 (Priority)</label>
+                                    <Input
+                                        type="number"
+                                        value={formData.priority}
+                                        onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
+                                    />
+                                </div>
                             </div>
+
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">우선순위 (Priority)</label>
+                                <label className="text-sm font-medium text-slate-700">제목</label>
                                 <Input
-                                    type="number"
-                                    value={formData.priority}
-                                    onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
+                                    placeholder="문서 제목을 입력하세요"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 />
+                            </div>
+
+                            <MarkdownEditor
+                                label="본문 내용"
+                                value={formData.content || ""}
+                                placeholder="본문 내용을 입력하세요. 이미지는 마크다운 문법으로 저장됩니다."
+                                onChange={(content) => setFormData({ ...formData, content })}
+                                onUploadImage={uploadArticleImage}
+                                onUploadSuccess={() => showToast("이미지를 본문에 추가했습니다.", "success")}
+                                onUploadError={(message) => showToast(message, "error")}
+                            />
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700">요약 (선택)</label>
+                                <textarea
+                                    className="w-full min-h-[80px] rounded-md border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-bon-green-start outline-none resize-none"
+                                    placeholder="문서 요약..."
+                                    value={formData.summary || ""}
+                                    onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="flex gap-6 pt-4 border-t border-slate-100">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.is_published}
+                                        onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
+                                        className="w-4 h-4 text-bon-green-start border-gray-300 rounded focus:ring-bon-green-start"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700">공개 게시</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.requires_sm}
+                                        onChange={(e) => setFormData({ ...formData, requires_sm: e.target.checked })}
+                                        className="w-4 h-4 text-bon-green-start border-gray-300 rounded focus:ring-bon-green-start"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700">SM 확인 필요 여부</span>
+                                </label>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">제목</label>
-                            <Input
-                                placeholder="문서 제목을 입력하세요"
-                                value={formData.title}
-                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">본문 내용</label>
-                            <textarea
-                                className="w-full min-h-[300px] rounded-md border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-bon-green-start outline-none resize-y"
-                                placeholder="본문 내용을 입력하세요..."
-                                value={formData.content}
-                                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">요약 (선택)</label>
-                            <textarea
-                                className="w-full min-h-[80px] rounded-md border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-bon-green-start outline-none resize-none"
-                                placeholder="문서 요약..."
-                                value={formData.summary || ""}
-                                onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="flex gap-6 pt-4 border-t border-slate-100">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.is_published}
-                                    onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                                    className="w-4 h-4 text-bon-green-start border-gray-300 rounded focus:ring-bon-green-start"
+                        <Card className="border-slate-200 bg-white/95 xl:sticky xl:top-24 h-fit">
+                            <CardHeader className="border-b border-slate-100 pb-4">
+                                <CardTitle className="text-lg">미리보기</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-5 p-5">
+                                <div className="rounded-xl bg-slate-50 px-4 py-3">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Title</p>
+                                    <p className="mt-2 text-xl font-semibold text-slate-900">
+                                        {deferredTitle || "제목을 입력하면 여기에 표시됩니다."}
+                                    </p>
+                                </div>
+                                <MarkdownContent
+                                    content={deferredContent}
+                                    emptyMessage="본문을 입력하면 마크다운 렌더링 결과를 여기서 바로 확인할 수 있습니다."
                                 />
-                                <span className="text-sm font-medium text-slate-700">공개 게시</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.requires_sm}
-                                    onChange={(e) => setFormData({ ...formData, requires_sm: e.target.checked })}
-                                    className="w-4 h-4 text-bon-green-start border-gray-300 rounded focus:ring-bon-green-start"
-                                />
-                                <span className="text-sm font-medium text-slate-700">SM 확인 필요 여부</span>
-                            </label>
-                        </div>
-
+                            </CardContent>
+                        </Card>
                     </div>
                 </main>
             </div>
