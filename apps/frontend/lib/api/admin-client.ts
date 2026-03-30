@@ -5,6 +5,8 @@ import type {
   ChatResponse,
   ChatSessionListItem,
   ChatSessionMessageItem,
+  CreateArticleImageUploadUrlRequest,
+  CreateArticleImageUploadUrlResponse,
   CreateArticleRequest,
   CreateBranchRequest,
   CreateCategoryRequest,
@@ -52,6 +54,15 @@ export function getArticle(id: string | number) {
 
 export function createArticle(body: CreateArticleRequest) {
   return apiPost<{ id: number }>("/api/admin/articles", body, undefined, "문서 생성에 실패했습니다.");
+}
+
+export function createArticleImageUploadUrl(body: CreateArticleImageUploadUrlRequest) {
+  return apiPost<CreateArticleImageUploadUrlResponse>(
+    "/api/admin/articles/presigned-upload",
+    body,
+    undefined,
+    "이미지 업로드 URL 생성에 실패했습니다."
+  );
 }
 
 export function updateArticle(id: string | number, body: UpdateArticleRequest) {

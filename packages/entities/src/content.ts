@@ -22,6 +22,13 @@ export interface ArticleEntity {
   requiresSm: boolean;
   isPublished: boolean;
   titleEmbedding: string | null;
+  retrievalKind: string | null;
+  retrievalText: string | null;
+  retrievalEmbedding: string | null;
+  retrievalModel: string | null;
+  retrievalVersion: string | null;
+  retrievalIndexedAt: EntityTimestamp | null;
+  retrievalError: string | null;
   deletedAt: EntityTimestamp | null;
   createdAt: EntityTimestamp;
   updatedAt: EntityTimestamp;

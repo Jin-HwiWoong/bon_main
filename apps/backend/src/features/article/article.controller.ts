@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Inject, NotFoundException, Param, ParseIntPipe, Post, Put, Query, UseGuards } from "@nestjs/common";
-import type { ArticleSummary } from "@bon/contracts";
+import type { ArticleSummary, CreateArticleImageUploadUrlResponse } from "@bon/contracts";
 import { AdminSessionGuard } from "../../common/guards/admin-session.guard";
+import { ArticleAssetService } from "./article-asset.service";
 import { CreateArticleDto } from "./dto/create-article.dto";
+import { CreateArticleImageUploadUrlDto } from "./dto/create-article-image-upload-url.dto";
 import { ListArticlesQueryDto } from "./dto/list-articles-query.dto";
 import { UpdateArticleDto } from "./dto/update-article.dto";
 import { ArticleService } from "./article.service";
@@ -9,7 +11,10 @@ import { ArticleService } from "./article.service";
 @UseGuards(AdminSessionGuard)
 @Controller("admin/articles")
 export class ArticleController {
-  constructor(@Inject(ArticleService) private readonly articleService: ArticleService) {}
+  constructor(
+    @Inject(ArticleService) private readonly articleService: ArticleService,
+    @Inject(ArticleAssetService) private readonly articleAssetService: ArticleAssetService
+  ) {}
 
   @Get()
   async list(
@@ -33,6 +38,16 @@ export class ArticleController {
   @Post()
   create(@Body() body: CreateArticleDto): Promise<{ id: number }> {
     return this.articleService.create(body);
+  }
+
+  @Post("presigned-upload")
+  createPresignedUpload(
+    @Body() body: CreateArticleImageUploadUrlDto
+  ): Promise<CreateArticleImageUploadUrlResponse> {
+    return this.articleAssetService.createImageUploadUrl({
+      fileName: body.file_name,
+      contentType: body.content_type
+    });
   }
 
   @Put(":id")

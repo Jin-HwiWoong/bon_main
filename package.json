@@ -37,6 +37,7 @@
     "test": "npm run test --workspaces --if-present",
     "clean": "rm -rf apps/backend/dist apps/frontend/.next apps/frontend/tsconfig.tsbuildinfo && npm run clean:packages",
     "db:migrate": "node scripts/run-db-migrations.js",
+    "db:backfill:retrieval": "node scripts/backfill-article-retrieval.js",
     "db:seed:admin": "node scripts/seed-admin.js",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check"

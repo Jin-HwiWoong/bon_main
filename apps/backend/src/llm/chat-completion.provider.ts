@@ -8,9 +8,12 @@ import type { ChatMessages, LlmUsage } from "./llm.types";
 export class ChatCompletionProvider {
   constructor(@Inject(OPENAI_CLIENT) private readonly client: OpenAI) {}
 
-  async complete(messages: ChatMessages): Promise<{ text: string; usage?: LlmUsage }> {
+  async complete(
+    messages: ChatMessages,
+    options?: { model?: string }
+  ): Promise<{ text: string; usage?: LlmUsage }> {
     const response = await this.client.chat.completions.create({
-      model: appConfig.llmModel,
+      model: options?.model ?? appConfig.llmModel,
       messages
     });
 
