@@ -53,4 +53,9 @@ export class BranchRepository {
       })
       .where(eq(branches.id, id));
   }
+
+  async delete(id: number) {
+    const [row] = await this.db.delete(branches).where(eq(branches.id, id)).returning();
+    return row ?? null;
+  }
 }

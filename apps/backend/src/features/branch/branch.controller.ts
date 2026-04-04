@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
 import type { BranchSummary } from "@bon/contracts";
 import { AdminSessionGuard } from "../../common/guards/admin-session.guard";
 import { CreateBranchDto } from "./dto/create-branch.dto";
@@ -26,5 +26,11 @@ export class BranchController {
     @Body() body: UpdateBranchDto
   ): Promise<BranchSummary> {
     return this.branchService.update(id, body);
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  delete(@Param("id", ParseIntPipe) id: number): Promise<void> {
+    return this.branchService.delete(id);
   }
 }

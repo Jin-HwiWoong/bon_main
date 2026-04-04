@@ -31,6 +31,13 @@ export class BranchService {
     return toBranchSummary(row);
   }
 
+  async delete(id: number): Promise<void> {
+    const row = await this.branchRepository.delete(id);
+    if (!row) {
+      throw new NotFoundException("지점을 찾을 수 없습니다.");
+    }
+  }
+
   async update(id: number, input: UpdateBranchRequest): Promise<BranchSummary> {
     const patch: Partial<typeof branches.$inferInsert> = {
       updatedAt: new Date()

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from "react"
 import type { CreateBranchRequest, UpdateBranchRequest } from "@bon/contracts"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Edit, Plus } from "lucide-react"
+import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react"
 
 import { Branch } from "@/types"
 import { LogoutButton } from "@/components/auth/logout-button"
 import { useRequireAuth } from "@/components/auth/auth-provider"
-import { createBranch, getBranches, updateBranch } from "@/lib/api/admin-client"
+import { createBranch, deleteBranch, getBranches, updateBranch } from "@/lib/api/admin-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Modal } from "@/components/ui/modal"
@@ -37,6 +37,8 @@ export default function AdminBranchesPage() {
     const [editing, setEditing] = useState<Branch | null>(null)
     const [saving, setSaving] = useState(false)
     const [form, setForm] = useState<BranchFormState>(emptyForm)
+    const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null)
+    const [deleting, setDeleting] = useState(false)
     const { isAuthorized, isLoading } = useRequireAuth({
         requiredRole: "admin",
         forbiddenMessage: "관리자만 접근 가능합니다."
@@ -82,6 +84,21 @@ export default function AdminBranchesPage() {
         setEditing(null)
         setForm(emptyForm)
         setModalOpen(false)
+    }
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return
+        setDeleting(true)
+        try {
+            await deleteBranch(deleteTarget.id)
+            showToast("지점이 삭제되었습니다.", "success")
+            setDeleteTarget(null)
+            void fetchBranches()
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : "삭제 중 오류가 발생했습니다.", "error")
+        } finally {
+            setDeleting(false)
+        }
     }
 
     const handleSave = async () => {
@@ -196,6 +213,12 @@ export default function AdminBranchesPage() {
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </button>
+                                                <button
+                                                    className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                                                    onClick={() => setDeleteTarget(branch)}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -205,6 +228,30 @@ export default function AdminBranchesPage() {
                     </div>
                 </main>
             </div>
+
+            <Modal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="지점 삭제">
+                <div className="space-y-4">
+                    <p className="text-sm text-slate-600">
+                        <span className="font-semibold text-slate-900">{deleteTarget?.name}</span> 지점을 삭제하시겠습니까?
+                        <br />
+                        <span className="text-red-500">삭제된 지점과 대화 내역은 복구할 수 없습니다.</span>
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                            취소
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="text-red-600 border-red-300 hover:bg-red-50"
+                            onClick={handleDelete}
+                            disabled={deleting}
+                        >
+                            {deleting ? "삭제 중..." : "삭제"}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? "지점 수정" : "지점 추가"}>
                 <form

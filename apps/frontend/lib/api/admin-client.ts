@@ -74,6 +74,10 @@ export function updateBranch(id: number, body: UpdateBranchRequest) {
   return apiPatch<BranchSummary>(`/api/admin/branches/${id}`, body, undefined, "지점 수정에 실패했습니다.");
 }
 
+export function deleteBranch(id: number) {
+  return apiDelete<void>(`/api/admin/branches/${id}`, undefined, "지점 삭제에 실패했습니다.");
+}
+
 export function getBranchChatSessions(branchId: number) {
   return apiGet<ChatSessionListItem[]>(
     `/api/admin/chat-sessions/branches/${branchId}`,
