@@ -4,7 +4,7 @@ import { ChatCompletionProvider } from "../../llm/chat-completion.provider";
 import { UsageCostService } from "../../llm/usage-cost.service";
 import { PromptBuilderService } from "./prompt-builder.service";
 import { RagRetrieverService } from "./rag-retriever.service";
-import type { RagChunk } from "./types";
+import type { RagDocument } from "./types";
 
 @Injectable()
 export class ChatService {
@@ -16,15 +16,15 @@ export class ChatService {
   ) {}
 
   async preview(question: string) {
-    const { chunks, fallbackToSm, requiresSmExists } = await this.ragRetrieverService.retrieve(question);
-    return { chunks, fallbackToSm, references: toReferences(chunks), requiresSmExists };
+    const { documents, fallbackToSm, requiresSmExists } = await this.ragRetrieverService.retrieve(question);
+    return { chunks: documents, fallbackToSm, references: toReferences(documents), requiresSmExists };
   }
 
   async getAnswer(question: string, opts?: { includeChunks?: boolean }) {
-    const { chunks, fallbackToSm, requiresSmExists } = await this.ragRetrieverService.retrieve(question);
+    const { documents, fallbackToSm, requiresSmExists } = await this.ragRetrieverService.retrieve(question);
     // 검색 결과와 정책을 합쳐 LLM이 바로 소비할 메시지로 조합한다.
-    const policyPrompt = this.promptBuilderService.buildPolicyPrompt(requiresSmExists, chunks.length > 0);
-    const messages = this.promptBuilderService.buildChatMessages(question, chunks, policyPrompt);
+    const policyPrompt = this.promptBuilderService.buildPolicyPrompt(requiresSmExists, documents.length > 0);
+    const messages = this.promptBuilderService.buildChatMessages(question, documents, policyPrompt);
     const { text: answer, usage } = await this.chatCompletionProvider.complete(messages);
 
     return {
@@ -32,15 +32,15 @@ export class ChatService {
       fallback_to_sm: fallbackToSm || requiresSmExists,
       usage,
       cost: this.usageCostService.calculate(usage),
-      references: toReferences(chunks),
-      used_chunks: opts?.includeChunks ? chunks : undefined
+      references: toReferences(documents),
+      used_chunks: opts?.includeChunks ? documents : undefined
     };
   }
 
   async streamAnswer(question: string) {
-    const { chunks, fallbackToSm, requiresSmExists } = await this.ragRetrieverService.retrieve(question);
-    const policyPrompt = this.promptBuilderService.buildPolicyPrompt(requiresSmExists, chunks.length > 0);
-    const messages = this.promptBuilderService.buildChatMessages(question, chunks, policyPrompt);
+    const { documents, fallbackToSm, requiresSmExists } = await this.ragRetrieverService.retrieve(question);
+    const policyPrompt = this.promptBuilderService.buildPolicyPrompt(requiresSmExists, documents.length > 0);
+    const messages = this.promptBuilderService.buildChatMessages(question, documents, policyPrompt);
     const { stream, usageRef: rawUsageRef } = await this.chatCompletionProvider.stream(messages);
     const usageRef: {
       value?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
@@ -76,15 +76,15 @@ export class ChatService {
       stream: wrapped,
       usageRef,
       fallbackToSm: fallbackToSm || requiresSmExists,
-      references: toReferences(chunks)
+      references: toReferences(documents)
     };
   }
 }
 
-function toReferences(chunks: RagChunk[]): ChatReference[] {
-  return chunks.map((chunk) => ({
-    article_id: chunk.article_id,
-    category_code: chunk.category_code,
-    title: chunk.title
+function toReferences(documents: RagDocument[]): ChatReference[] {
+  return documents.map((document) => ({
+    article_id: document.article_id,
+    category_code: document.category_code,
+    title: document.title
   }));
 }

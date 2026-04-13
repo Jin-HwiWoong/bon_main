@@ -66,3 +66,16 @@ export interface CreateArticleRequest {
 }
 
 export type UpdateArticleRequest = Partial<CreateArticleRequest>;
+
+export interface CreateArticleImageUploadUrlRequest {
+  file_name: string;
+  content_type: string;
+}
+
+export interface CreateArticleImageUploadUrlResponse {
+  object_key: string;
+  upload_url: string;
+  public_url: string;
+  method: "PUT";
+  headers: Record<string, string>;
+}

@@ -16,12 +16,23 @@ export type AppConfig = {
   openaiApiKey: string;
   openaiBaseUrl?: string;
   llmModel: string;
+  summaryModel: string;
   embeddingModel: string;
   embeddingDim: number;
   ragTopK: number;
   ragMinScore: number;
+  ragSummaryMinChars: number;
+  ragRetrievalVersion: string;
   llmPromptCostPer1k: number;
   llmCompletionCostPer1k: number;
+  s3Region?: string;
+  s3Bucket?: string;
+  s3AccessKeyId?: string;
+  s3SecretAccessKey?: string;
+  s3Endpoint?: string;
+  s3PublicBaseUrl?: string;
+  s3UploadPrefix: string;
+  s3PresignExpiresSeconds: number;
   adminUsername: string;
   adminDisplayName: string;
   adminPassword?: string;
@@ -32,8 +43,13 @@ const DEFAULT_EMBEDDING_DIM = 1536;
 const DEFAULT_RAG_TOP_K = 5;
 const DEFAULT_RAG_MIN_SCORE = 0.4;
 const DEFAULT_LLM_MODEL = "gpt-5.1";
+const DEFAULT_SUMMARY_MODEL = "gpt-5.1";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
+const DEFAULT_RAG_SUMMARY_MIN_CHARS = 2400;
+const DEFAULT_RAG_RETRIEVAL_VERSION = "v1";
 const DEFAULT_SESSION_TABLE = "user_sessions";
+const DEFAULT_S3_UPLOAD_PREFIX = "articles";
+const DEFAULT_S3_PRESIGN_EXPIRES_SECONDS = 900;
 const FORBIDDEN_SESSION_SECRETS = new Set(["", "change-me", "dev-session-secret"]);
 
 const envCandidates = [
@@ -125,6 +141,7 @@ function normalizeConfig(source: EnvSource): AppConfig {
     openaiApiKey: requireNonEmptyString(source.OPENAI_API_KEY, "OPENAI_API_KEY"),
     openaiBaseUrl: source.OPENAI_BASE_URL?.trim() || undefined,
     llmModel: source.LLM_MODEL?.trim() || DEFAULT_LLM_MODEL,
+    summaryModel: source.RAG_SUMMARY_MODEL?.trim() || DEFAULT_SUMMARY_MODEL,
     embeddingModel: source.EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_MODEL,
     embeddingDim: parsePositiveInteger(source.EMBEDDING_DIM, "EMBEDDING_DIM", DEFAULT_EMBEDDING_DIM),
     ragTopK: parsePositiveInteger(source.RAG_TOP_K, "RAG_TOP_K", DEFAULT_RAG_TOP_K),
@@ -132,6 +149,12 @@ function normalizeConfig(source: EnvSource): AppConfig {
       min: 0,
       max: 1
     }),
+    ragSummaryMinChars: parsePositiveInteger(
+      source.RAG_SUMMARY_MIN_CHARS,
+      "RAG_SUMMARY_MIN_CHARS",
+      DEFAULT_RAG_SUMMARY_MIN_CHARS
+    ),
+    ragRetrievalVersion: source.RAG_RETRIEVAL_VERSION?.trim() || DEFAULT_RAG_RETRIEVAL_VERSION,
     llmPromptCostPer1k: parseFloatInRange(
       source.LLM_PROMPT_COST_PER_1K,
       "LLM_PROMPT_COST_PER_1K",
@@ -143,6 +166,18 @@ function normalizeConfig(source: EnvSource): AppConfig {
       "LLM_COMPLETION_COST_PER_1K",
       0,
       { min: 0 }
+    ),
+    s3Region: source.S3_REGION?.trim() || undefined,
+    s3Bucket: source.S3_BUCKET?.trim() || undefined,
+    s3AccessKeyId: source.S3_ACCESS_KEY_ID?.trim() || undefined,
+    s3SecretAccessKey: source.S3_SECRET_ACCESS_KEY?.trim() || undefined,
+    s3Endpoint: source.S3_ENDPOINT?.trim() || undefined,
+    s3PublicBaseUrl: source.S3_PUBLIC_BASE_URL?.trim() || undefined,
+    s3UploadPrefix: source.S3_UPLOAD_PREFIX?.trim() || DEFAULT_S3_UPLOAD_PREFIX,
+    s3PresignExpiresSeconds: parsePositiveInteger(
+      source.S3_PRESIGN_EXPIRES_SECONDS,
+      "S3_PRESIGN_EXPIRES_SECONDS",
+      DEFAULT_S3_PRESIGN_EXPIRES_SECONDS
     ),
     adminUsername: source.ADMIN_USERNAME?.trim() || "admin",
     adminDisplayName: source.ADMIN_DISPLAY_NAME?.trim() || "관리자",

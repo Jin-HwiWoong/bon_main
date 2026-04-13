@@ -3,9 +3,9 @@ import type { CreateArticleRequest, UpdateArticleRequest } from "@bon/contracts"
 import { CategoryRepository } from "../category/category.repository";
 import { KnowledgeBaseVectorRepository } from "../../infrastructure/vector/knowledge-base-vector.repository";
 import { EmbeddingsProvider } from "../../llm/embeddings.provider";
-import { splitContentIntoChunks } from "../../utils/chunker";
-import { toPgVector, toPgVectorMany } from "../../utils/pgvector";
+import { toPgVector } from "../../utils/pgvector";
 import { ArticleRepository } from "./article.repository";
+import { ArticleRetrievalService } from "./article-retrieval.service";
 
 @Injectable()
 export class ArticleIngestionService {
@@ -13,6 +13,7 @@ export class ArticleIngestionService {
     @Inject(CategoryRepository) private readonly categoryRepository: CategoryRepository,
     @Inject(ArticleRepository) private readonly articleRepository: ArticleRepository,
     @Inject(EmbeddingsProvider) private readonly embeddingsProvider: EmbeddingsProvider,
+    @Inject(ArticleRetrievalService) private readonly articleRetrievalService: ArticleRetrievalService,
     @Inject(KnowledgeBaseVectorRepository)
     private readonly knowledgeBaseVectorRepository: KnowledgeBaseVectorRepository
   ) {}
@@ -51,19 +52,23 @@ export class ArticleIngestionService {
       throw new BadRequestException("카테고리를 찾을 수 없습니다.");
     }
 
-    const chunks = splitContentIntoChunks(articleInput.content);
-    const chunkEmbeddings = await this.embeddingsProvider.embedMany(chunks);
-    const chunkVectors = toPgVectorMany(chunkEmbeddings);
     const titleEmbedding = toPgVector(await this.embeddingsProvider.embedText(articleInput.title));
+    const retrieval = await this.articleRetrievalService.build({
+      title: articleInput.title,
+      content: articleInput.content,
+      categoryCode: category.code
+    });
 
-    // 문서 본문, 제목 임베딩, 청크 교체는 하나의 트랜잭션으로 묶어 일관성을 유지한다.
-    return this.knowledgeBaseVectorRepository.saveArticleWithChunks({
+    // 문서 본문과 검색용 임베딩을 하나의 트랜잭션으로 저장해 일관성을 유지한다.
+    return this.knowledgeBaseVectorRepository.saveArticleWithRetrieval({
       id,
       input: articleInput,
       titleEmbedding,
-      chunks,
-      chunkVectors,
-      categoryCode: category.code
+      retrievalKind: retrieval.retrievalKind,
+      retrievalText: retrieval.retrievalText,
+      retrievalEmbedding: retrieval.retrievalEmbedding,
+      retrievalModel: retrieval.retrievalModel,
+      retrievalVersion: retrieval.retrievalVersion
     });
   }
 }

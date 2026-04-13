@@ -136,6 +136,13 @@ export const articles = pgTable(
     requiresSm: boolean("requires_sm").notNull().default(false),
     isPublished: boolean("is_published").notNull().default(true),
     titleEmbedding: vector("title_embedding", { dimensions: VECTOR_DIMENSION }),
+    retrievalKind: varchar("retrieval_kind", { length: 16 }),
+    retrievalText: text("retrieval_text"),
+    retrievalEmbedding: vector("retrieval_embedding", { dimensions: VECTOR_DIMENSION }),
+    retrievalModel: varchar("retrieval_model", { length: 120 }),
+    retrievalVersion: varchar("retrieval_version", { length: 32 }),
+    retrievalIndexedAt: timestamp("retrieval_indexed_at", { withTimezone: true }),
+    retrievalError: text("retrieval_error"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt,
     updatedAt
@@ -143,6 +150,7 @@ export const articles = pgTable(
   (table) => ({
     categoryIdIdx: index("idx_kb_article_category").on(table.categoryId),
     publishedIdx: index("idx_kb_article_published").on(table.isPublished),
+    retrievalKindIdx: index("idx_kb_article_retrieval_kind").on(table.retrievalKind),
     deletedAtIdx: index("idx_kb_article_deleted_at").on(table.deletedAt)
   })
 );
